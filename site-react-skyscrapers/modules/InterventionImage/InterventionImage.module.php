@@ -27,10 +27,6 @@ use Intervention\ImageHash\Strategies\BlockStrategy;
 use Intervention\ImageHash\Strategies\DifferenceStrategy;
 use Intervention\ImageHash\Strategies\PerceptualStrategy;
 
-if (!class_exists(ImageManager::class) || !class_exists(VipsDriver::class) || !class_exists(Hash::class)) {
-    require __DIR__ . '/vendor/autoload.php';
-}
-
 /**
  * InterventionImageEngine for ProcessWire
  * 
@@ -102,7 +98,7 @@ class InterventionImage extends WireData implements Module, ConfigurableModule
     {
         return [
             'title' => __('Intervention Image Engine'),
-            'version' => 120,
+            'version' => 121,
             'summary' => __('Replaces PW sizing with Intervention Image v4.4 (GD, Imagick, libvips) + Delayed Rendering + Perceptual ImageHash.'),
             'author' => 'Iskender TOTOGLU @trk @ukyo',
             'href' => 'https://github.com/trk/InterventionImage',
@@ -117,6 +113,7 @@ class InterventionImage extends WireData implements Module, ConfigurableModule
     public function __construct()
     {
         parent::__construct();
+        require_once __DIR__ . '/vendor/autoload.php';
         foreach ($this->defaults as $key => $value) {
             $this->set($key, $value);
         }
