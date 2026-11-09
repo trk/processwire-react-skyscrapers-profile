@@ -1,0 +1,339 @@
+<?php
+
+declare(strict_types=1);
+
+namespace ProcessWire;
+
+/**
+ * ProcessWire Map Marker Fieldtype
+ *
+ * Holds an address and geocodes it to latitude and longitude via Google Maps
+ * 
+ * For documentation about the fields used in this class, please see:  
+ * /wire/core/Fieldtype.php
+ * 
+ * ProcessWire 3.x 
+ * Copyright (C) 2026 by Ryan Cramer 
+ * Licensed under MPL 2.0
+ * 
+ * https://processwire.com
+ *
+ * @todo implement a getMatchQuery method and support LIKE with address. 
+ * 
+ * @property string $googleApiKey
+ * @method null getCompatibleFieldtypes(Field $field)
+ * @method MapMarker wakeupValue(Page $page, Field $field, $value)
+ * @method array<string, mixed> sleepValue(Page $page, Field $field, $value)
+ *
+ */
+
+class FieldtypeMapMarker extends Fieldtype implements ConfigurableModule
+{
+	/**
+	 * @return array<string, mixed>
+	 */
+	public static function getModuleInfo(): array
+	{
+		return [
+			'title' => 'Map Marker',
+			'version' => 300,
+			'summary' => 'Field that stores an address with latitude and longitude coordinates and has built-in geocoding capability with Google Maps API.',
+			'installs' => 'InputfieldMapMarker',
+			'icon' => 'map-marker',
+		];
+	}
+
+	/**
+	 * Include our MapMarker class, which serves as the value for fields of type FieldtypeMapMarker
+	 *
+	 */
+	public function __construct()
+	{
+		parent::__construct();
+		require_once __DIR__ . '/MapMarker.php';
+	}
+
+	public function set($key, $value): self
+	{
+		/*
+		if($key === 'googleApiKey' && strpos($this->wire('config')->httpHost, 'localhost') !== false) {
+			// disable API key when in localhost environment
+			if($this->wire('page')->template == 'admin') $value = '';
+		}
+		*/
+		return parent::set($key, $value);
+	}
+
+	public function getGoogleMapsURL(): string
+	{
+		$url = 'https://maps.google.com/maps/api/js';
+		$key = (string) $this->get('googleApiKey');
+		if ($key !== '') {
+			$url .= "?key=$key";
+		}
+		return $url;
+	}
+
+	/**
+	 * Return the Inputfield required by this Fieldtype
+	 * 
+	 * @param Page $page
+	 * @param Field $field
+	 * @return InputfieldMapMarker
+	 *
+	 */
+	public function getInputfield(Page $page, Field $field): InputfieldMapMarker
+	{
+		/** @var InputfieldMapMarker $inputfield */
+		$inputfield = $this->wire()->modules->get('InputfieldMapMarker');
+		$inputfield->set('googleApiKey', $this->get('googleApiKey'));
+		return $inputfield;
+	}
+
+	/**
+	 * Return all compatible Fieldtypes 
+	 * 
+	 * @param Field $field
+	 * @return null
+	 *
+	 */
+	public function ___getCompatibleFieldtypes(Field $field): null
+	{
+		// there are no other fieldtypes compatible with this one
+		return null;
+	}
+
+	/**
+	 * Sanitize value for runtime
+	 * 
+	 * @param Page $page
+	 * @param Field $field
+	 * @param mixed $value
+	 * @return MapMarker
+	 *
+	 */
+	public function sanitizeValue(Page $page, Field $field, $value): MapMarker
+	{
+		// if it's not a MapMarker, then just return a blank MapMarker
+		if (!$value instanceof MapMarker) {
+			$value = $this->getBlankValue($page, $field);
+		}
+
+		// if the address changed, tell the $page that this field changed
+		if ($value->isChanged('address')) {
+			$page->trackChange($field->name);
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Get a blank value used by this fieldtype
+	 * 
+	 * @param Page $page
+	 * @param Field $field
+	 * @return MapMarker
+	 *
+	 */
+	public function getBlankValue(Page $page, Field $field): MapMarker
+	{
+		$value = new MapMarker();
+		$this->wire($value);
+		return $value;
+	}
+
+	/**
+	 * Given a raw value (value as stored in DB), return the value as it would appear in a Page object
+	 *
+	 * @param Page $page
+	 * @param Field $field
+	 * @param mixed $value
+	 * @return MapMarker
+	 *
+	 */
+	public function ___wakeupValue(Page $page, Field $field, $value): MapMarker
+	{
+		// get a blank MapMarker instance
+		$marker = $this->getBlankValue($page, $field);
+
+		if (!is_array($value)) {
+			return $marker;
+		}
+
+		if ((string) ($value['lat'] ?? '') === '0') {
+			$value['lat'] = '';
+		}
+		if ((string) ($value['lng'] ?? '') === '0') {
+			$value['lng'] = '';
+		}
+
+		// populate the marker
+		$marker->address = (string) ($value['data'] ?? '');
+		$marker->lat = (string) ($value['lat'] ?? '');
+		$marker->lng = (string) ($value['lng'] ?? '');
+		$marker->status = (int) ($value['status'] ?? 0);
+		$marker->zoom = (int) ($value['zoom'] ?? 0);
+		$marker->setTrackChanges(true);
+
+		return $marker;
+	}
+
+	/**
+	 * Given an 'awake' value, as set by wakeupValue, convert the value back to a basic type for storage in DB. 
+	 *              
+	 * @param Page $page
+	 * @param Field $field
+	 * @param mixed $value
+	 * @return array{data: string, lat: string|int, lng: string|int, status: int, zoom: int}
+	 * @throws WireException
+	 *
+	 */
+	public function ___sleepValue(Page $page, Field $field, $value): array
+	{
+		$marker = $value;
+
+		if (!$marker instanceof MapMarker) {
+			throw new WireException("Expecting an instance of MapMarker");
+		}
+
+		// if the address was changed, then force it to geocode the new address
+		if ($marker->isChanged('address') && $marker->address !== '' && $marker->status !== MapMarker::statusNoGeocode) {
+			$marker->geocode();
+		}
+
+		return [
+			'data' => (string) $marker->address,
+			'lat' => strlen((string) $marker->lat) > 0 ? (string) $marker->lat : 0,
+			'lng' => strlen((string) $marker->lng) > 0 ? (string) $marker->lng : 0,
+			'status' => (int) $marker->status,
+			'zoom' => (int) $marker->zoom,
+		];
+	}
+
+	/**
+	 * Return the database schema in specified format
+	 * 
+	 * @param Field $field
+	 * @return array<string, mixed>
+	 *
+	 */
+	public function getDatabaseSchema(Field $field): array
+	{
+		// get the default schema
+		$schema = parent::getDatabaseSchema($field);
+
+		$schema['data'] = "VARCHAR(255) NOT NULL DEFAULT ''"; 	// address (reusing the 'data' field from default schema)
+		$schema['lat'] = "FLOAT(10,6) NOT NULL DEFAULT 0";	// latitude
+		$schema['lng'] = "FLOAT(10,6) NOT NULL DEFAULT 0";	// longitude
+		$schema['status'] = "TINYINT NOT NULL DEFAULT 0";	// geocode status
+		$schema['zoom'] = "TINYINT NOT NULL DEFAULT 0";		// zoom level (schema v1)
+
+		$schema['keys']['latlng'] = "KEY latlng (lat, lng)";	// keep an index of lat/lng 
+		$schema['keys']['data'] = 'FULLTEXT KEY `data` (`data`)';
+		$schema['keys']['zoom'] = "KEY zoom (zoom)";
+
+		if ($field->id) {
+			$this->updateDatabaseSchema($field, $schema);
+		}
+
+		return $schema;
+	}
+
+	/**
+	 * Update the DB schema, if necessary
+	 * 
+	 * @param Field $field
+	 * @param array<string, mixed> $schema
+	 *
+	 */
+	protected function updateDatabaseSchema(Field $field, array $schema): void
+	{
+		$requiredVersion = 1;
+		$schemaVersion = (int) $field->get('schemaVersion');
+
+		if ($schemaVersion >= $requiredVersion) {
+			// already up-to-date
+			return;
+		}
+
+		if ($schemaVersion === 0) {
+			// update schema to v1: add 'zoom' column	
+			$schemaVersion = 1;
+			$database = $this->wire()->database;
+			$table = $database->escapeTable($field->getTable());
+			$query = $database->prepare("SHOW TABLES LIKE '$table'");
+			$query->execute();
+			$row = $query->fetch(\PDO::FETCH_NUM);
+			$query->closeCursor();
+			if (!empty($row)) {
+				$query = $database->prepare("SHOW COLUMNS FROM `$table` WHERE field='zoom'");
+				$query->execute();
+				if (!$query->rowCount()) {
+					try {
+						$database->exec("ALTER TABLE `$table` ADD zoom {$schema['zoom']} AFTER status");
+						$this->message("Added 'zoom' column to '{$field->table}'");
+					} catch (\Exception $e) {
+						$this->error($e->getMessage());
+					}
+				}
+			}
+		}
+
+		$field->set('schemaVersion', $schemaVersion);
+		$field->save();
+	}
+
+	/**
+	 * Match values for PageFinder
+	 * 
+	 * @param PageFinderDatabaseQuerySelect|DatabaseQuerySelect $query
+	 * @param string $table
+	 * @param string $subfield
+	 * @param string $operator
+	 * @param mixed $value
+	 * @return PageFinderDatabaseQuerySelect|DatabaseQuerySelect
+	 *
+	 */
+	public function getMatchQuery($query, $table, $subfield, $operator, $value): PageFinderDatabaseQuerySelect|DatabaseQuerySelect
+	{
+		if (!$subfield || $subfield === 'address') {
+			$subfield = 'data';
+		}
+		if ($subfield !== 'data' || $this->wire()->database->isOperator($operator)) {
+			// if dealing with something other than address, or operator is native to SQL,
+			// then let Fieldtype::getMatchQuery handle it instead
+			return parent::getMatchQuery($query, $table, $subfield, $operator, $value);
+		}
+		// if we get here, then we're performing either %= (LIKE and variations) or *= (FULLTEXT and variations)
+		$ft = new DatabaseQuerySelectFulltext($query);
+		$ft->match($table, $subfield, $operator, (string) $value);
+		return $query;
+	}
+
+	/**
+	 * Module configuration
+	 * 
+	 * @param array<string, mixed> $data
+	 * @return InputfieldWrapper
+	 * 
+	 */
+	public static function getModuleConfigInputfields(array $data): InputfieldWrapper
+	{
+		$inputfields = new InputfieldWrapper();
+		if (wire()->config->demo) {
+			$data['googleApiKey'] = 'Not shown in demo mode';
+		}
+		/** @var InputfieldText $f */
+		$f = wire()->modules->get('InputfieldText');
+		$f->attr('name', 'googleApiKey');
+		$f->label = __('Google Maps API Key');
+		$f->icon = 'map';
+		$f->description = sprintf(
+			__('[Click here](%s) for instructions from Google on how to obtain an API key.'),
+			'https://developers.google.com/maps/documentation/javascript/get-api-key'
+		);
+		$f->attr('value', isset($data['googleApiKey']) ? (string) $data['googleApiKey'] : '');
+		$inputfields->add($f);
+		return $inputfields;
+	}
+}

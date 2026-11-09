@@ -1,0 +1,78 @@
+name: 🐛 Bug Report
+description: ⚠️ NEVER report security issues publicly, please contact us directly
+labels: ["bug"]
+
+body:
+  - type: input
+    id: affected-versions
+    attributes:
+      label: Profile version(s) affected
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: processwire-version
+    attributes:
+      label: ProcessWire version
+      placeholder: 3.0.275
+    validations:
+      required: true
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version
+      placeholder: 8.5.12
+    validations:
+      required: true
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database driver
+      options:
+        - MySQL / MariaDB
+        - SQLite
+        - PostgreSQL
+      default: 0
+    validations:
+      required: true
+  - type: dropdown
+    id: component-area
+    attributes:
+      label: Affected Area
+      options:
+        - ProcessWire Installer / Database Import (install.sql)
+        - Custom Page Classes (site/classes/*Page.php)
+        - Inertia DataProviders (site/inertia/*Provider.php)
+        - React / TypeScript Frontend Components (site/templates/assets/js/*)
+        - InterventionImage / Media Serialization (WebP, LQIP, Color Palette)
+        - Leaflet Maps & Selector Inspector
+      default: 0
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of the problem
+    validations:
+      required: true
+  - type: textarea
+    id: how-to-reproduce
+    attributes:
+      label: How to reproduce
+      description: |
+        ⚠️ This is the most important part of the report ⚠️
+        Please share the steps, URL, or configuration needed to reproduce the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: possible-solution
+    attributes:
+      label: Possible Solution
+      description: |
+        Optional: only if you have suggestions on a fix/reason for the bug.
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: "Optional: any other context about the problem: log messages, screenshots, etc."

@@ -1,0 +1,7 @@
+.DS_Store
+.DS_Store?
+.idea/
+.vscode/
+site-react-skyscrapers/templates/node_modules/
+site-react-skyscrapers/templates/.env
+site-react-skyscrapers/templates/hot

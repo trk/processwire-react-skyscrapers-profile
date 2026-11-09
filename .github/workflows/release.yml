@@ -1,0 +1,118 @@
+name: "Tag, Release"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "profile.json"
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tag_and_release:
+    runs-on: ubuntu-latest
+    env:
+      VERSION_FILE: "profile.json"
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Validate PHP syntax and profile.json
+        run: |
+          find . -name "*.php" -not -path "*/vendor/*" -not -path "*/node_modules/*" -exec php -l {} +
+          php -r 'json_decode(file_get_contents(getenv("VERSION_FILE")), true, 512, JSON_THROW_ON_ERROR);'
+
+      - name: Extract profile version and directory
+        id: get_version
+        run: |
+          VERSION=$(php -r '
+            $data = json_decode(file_get_contents(getenv("VERSION_FILE")), true);
+            echo $data["version"] ?? "";
+          ')
+          PROFILE_DIR=$(php -r '
+            $data = json_decode(file_get_contents(getenv("VERSION_FILE")), true);
+            echo $data["profile"] ?? "site-react-skyscrapers";
+          ')
+
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not find the version number in ${{ env.VERSION_FILE }}"
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "profile_dir=${PROFILE_DIR}" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          TAG="v${{ steps.get_version.outputs.version }}"
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q "refs/tags/$TAG"; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag $TAG already exists on remote. Skipping release."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Configure Git User
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Create Git Tag and GitHub Release
+        if: steps.check_tag.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ steps.get_version.outputs.version }}"
+          PROFILE_DIR="${{ steps.get_version.outputs.profile_dir }}"
+          REPO="${{ github.repository }}"
+          echo "Generated Tag: $TAG"
+
+          git tag "$TAG"
+          git push origin "$TAG"
+
+          echo "## What's Changed" > release_notes.md
+          echo "" >> release_notes.md
+
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            COMMITS=$(git log --format="%H" "${PREV_TAG}..HEAD")
+            COMPARE_URL="https://github.com/$REPO/compare/$PREV_TAG...$TAG"
+          else
+            COMMITS=$(git log --format="%H" HEAD)
+            COMPARE_URL="https://github.com/$REPO/commits/$TAG"
+          fi
+
+          for SHA in $COMMITS; do
+            TITLE=$(git log --format="%s" -n 1 "$SHA")
+            SHORT_SHA=$(git rev-parse --short "$SHA")
+
+            LOGIN=$(gh api "repos/$REPO/commits/$SHA" --jq '.author.login // empty' 2>/dev/null || echo "")
+            if [ -z "$LOGIN" ]; then
+              LOGIN=$(git log --format="%an" -n 1 "$SHA")
+            fi
+
+            if [[ "$LOGIN" == *" "* ]]; then
+              echo "* $TITLE by **$LOGIN** in $SHORT_SHA" >> release_notes.md
+            else
+              echo "* $TITLE by @$LOGIN in $SHORT_SHA" >> release_notes.md
+            fi
+          done
+
+          echo "" >> release_notes.md
+          echo "**Full Changelog**: $COMPARE_URL" >> release_notes.md
+
+          ZIP_FILE="${PROFILE_DIR}.zip"
+          git archive --format=zip -o "$ZIP_FILE" HEAD "$PROFILE_DIR"
+
+          gh release create "$TAG" "$ZIP_FILE" -F release_notes.md --title "$TAG"

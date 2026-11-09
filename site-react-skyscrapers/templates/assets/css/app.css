@@ -1,0 +1,175 @@
+@import "tailwindcss";
+@import "@fontsource-variable/archivo";
+@import "@fontsource-variable/geist-mono";
+@import "leaflet/dist/leaflet.css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+	--background: #f6f4ef;
+	--foreground: #141619;
+	--card: #edeae2;
+	--card-foreground: #141619;
+	--popover: #f6f4ef;
+	--popover-foreground: #141619;
+	--primary: #1d4ed8;
+	--primary-foreground: #f8fafc;
+	--secondary: #e5e0d5;
+	--secondary-foreground: #1e2024;
+	--muted: #eae6dc;
+	--muted-foreground: #52565e;
+	--accent: #b45309;
+	--accent-foreground: #fffbeb;
+	--destructive: #b91c1c;
+	--destructive-foreground: #fef2f2;
+	--border: #d5cfc2;
+	--input: #cbc4b5;
+	--ring: #1d4ed8;
+	--radius: 0.25rem;
+	--font-sans: "Archivo Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+	--font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.dark {
+	--background: #0f1115;
+	--foreground: #eceae4;
+	--card: #161920;
+	--card-foreground: #eceae4;
+	--popover: #161920;
+	--popover-foreground: #eceae4;
+	--primary: #3b82f6;
+	--primary-foreground: #0f1115;
+	--secondary: #1e222b;
+	--secondary-foreground: #eceae4;
+	--muted: #181c24;
+	--muted-foreground: #9ca3af;
+	--accent: #d97706;
+	--accent-foreground: #0f1115;
+	--destructive: #ef4444;
+	--destructive-foreground: #0f1115;
+	--border: #252a34;
+	--input: #2c323e;
+	--ring: #3b82f6;
+}
+
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--font-sans: var(--font-sans);
+	--font-mono: var(--font-mono);
+	--radius-sm: calc(var(--radius) - 2px);
+	--radius-md: var(--radius);
+	--radius-lg: calc(var(--radius) + 2px);
+}
+
+@layer base {
+	* {
+		border-color: var(--border);
+		caret-color: var(--primary);
+	}
+
+	html {
+		font-family: var(--font-sans);
+		background-color: var(--background);
+		color: var(--foreground);
+		scrollbar-width: thin;
+		scrollbar-color: var(--border) var(--background);
+	}
+
+	body {
+		background-color: var(--background);
+		color: var(--foreground);
+		font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+	}
+
+	h1, h2, h3, h4 {
+		text-wrap: balance;
+		letter-spacing: -0.025em;
+	}
+
+	a {
+		text-underline-offset: 4px;
+	}
+
+	::selection {
+		background-color: var(--primary);
+		color: var(--primary-foreground);
+	}
+
+	::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: var(--background);
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: var(--border);
+		border-radius: 2px;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background: var(--muted-foreground);
+	}
+
+	:focus-visible {
+		outline: 2px solid var(--ring);
+		outline-offset: 2px;
+	}
+}
+
+.tabular-nums {
+	font-variant-numeric: tabular-nums;
+}
+
+.monograph-prose p {
+	margin-bottom: 1.15rem;
+	line-height: 1.72;
+	max-width: 68ch;
+	color: var(--foreground);
+}
+
+.monograph-prose p:last-child {
+	margin-bottom: 0;
+}
+
+/* Custom Leaflet container styling aligned with Avery Architectural Folio */
+.leaflet-container {
+	font-family: var(--font-sans);
+	background-color: var(--card);
+}
+
+.dark .leaflet-container:not([data-layer="satellite"]) .leaflet-tile-pane {
+	filter: invert(100%) hue-rotate(180deg) brightness(94%) contrast(90%) saturate(65%);
+}
+
+.leaflet-popup-content-wrapper {
+	background-color: var(--popover);
+	color: var(--popover-foreground);
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+.leaflet-popup-tip {
+	background-color: var(--popover);
+}

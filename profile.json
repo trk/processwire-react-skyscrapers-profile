@@ -1,0 +1,41 @@
+{
+	"name": "trk/processwire-react-skyscrapers-profile",
+	"profile": "site-react-skyscrapers",
+	"title": "React Skyscrapers",
+	"version": "1.0.0",
+	"summary": "A modern Single-Page Application (SPA) edition of the classic US Skyscrapers directory—powered by ProcessWire Custom Page Classes, Inertia.js v3, React 19, Vite, Tailwind CSS v4, Leaflet maps, and InterventionImage with LQIP and dominant color extraction.",
+	"homepage": "https://github.com/trk/processwire-react-skyscrapers-profile",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/trk/processwire-react-skyscrapers-profile.git"
+	},
+	"license": "MPL-2.0",
+	"authors": [
+		{
+			"name": "Iskender TOTOGLU",
+			"email": "iskender@totoglu.com",
+			"homepage": "https://totoglu.com/"
+		}
+	],
+	"requires": {
+		"php": ">=8.4.0",
+		"processwire": ">=3.0.271"
+	},
+	"modules": {
+		"Inertia": "trk/processwire-inertia",
+		"Vite": "trk/processwire-vite",
+		"InterventionImage": "trk/processwire-intervention-image",
+		"FieldtypeMapMarker": "FieldtypeMapMarker",
+		"FileValidatorImage": "FileValidatorImage",
+		"FileValidatorSvgSanitizer": "FileValidatorSvgSanitizer"
+	},
+	"frontend": {
+		"framework": "React 19",
+		"protocol": "Inertia.js v3",
+		"bundler": "Vite 8",
+		"styling": "Tailwind CSS v4 + shadcn/ui (Radix UI)",
+		"language": "TypeScript 7",
+		"maps": "Leaflet 1.9"
+	},
+	"screenshot": "site-react-skyscrapers/install/skyscrapers-preview.jpg"
+}

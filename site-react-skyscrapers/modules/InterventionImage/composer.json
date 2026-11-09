@@ -1,0 +1,40 @@
+{
+  "name": "trk/intervention-image",
+  "description": "High-performance ProcessWire image engine powered by Intervention Image v4.4 (GD, Imagick, libvips) with delayed rendering, WebP/AVIF output, focal-point zoom cropping, LQIP, ColorExtractor, and perceptual ImageHash hooks.",
+  "type": "pw-module",
+  "keywords": [
+    "processwire",
+    "totoglu",
+    "wire",
+    "intervention",
+    "image",
+    "vips",
+    "imagehash",
+    "webp",
+    "avif",
+    "lqip",
+    "responsive-images"
+  ],
+  "homepage": "https://github.com/trk/InterventionImage",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Iskender TOTOGLU",
+      "email": "iskender@totoglu.com",
+      "homepage": "https://totoglu.com/"
+    }
+  ],
+  "require": {
+    "php": ">=8.3",
+    "intervention/image": "^4.4",
+    "intervention/image-driver-vips": "^4.2",
+    "intervention/imagehash": "^1.0"
+  },
+  "config": {
+    "process-timeout": 0,
+    "allow-plugins": {
+      "hari/pw-module": true
+    }
+  },
+  "minimum-stability": "dev"
+}
